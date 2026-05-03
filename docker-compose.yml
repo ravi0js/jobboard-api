@@ -1,0 +1,46 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: jobboard_app
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    volumes:
+      - .:/var/www/html
+    networks:
+      - jobboard
+    user: "1000:984"
+
+  mysql:
+    image: mysql:8.0
+    container_name: jobboard_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: jobboard
+      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_PASSWORD: secret
+      MYSQL_USER: jobboard
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - jobboard
+
+  redis:
+    image: redis:alpine
+    container_name: jobboard_redis
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    networks:
+      - jobboard
+
+networks:
+  jobboard:
+    driver: bridge
+
+volumes:
+  mysql_data:
