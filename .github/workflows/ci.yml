@@ -1,0 +1,99 @@
+name: JobBoard API CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    name: Run PHPUnit Tests
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: jobboard_testing
+          MYSQL_ROOT_PASSWORD: secret
+          MYSQL_USER: jobboard
+          MYSQL_PASSWORD: secret
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+      redis:
+        image: redis:alpine
+        ports:
+          - 6379:6379
+        options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo, pdo_mysql, redis, zip, bcmath, gd
+          coverage: none
+
+      - name: Copy .env
+        run: cp .env.example .env
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Generate app key
+        run: php artisan key:generate
+
+      - name: Run migrations
+        env:
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: jobboard_testing
+          DB_USERNAME: jobboard
+          DB_PASSWORD: secret
+          CACHE_STORE: array
+          SESSION_DRIVER: array
+          QUEUE_CONNECTION: sync
+        run: php artisan migrate --force
+
+      - name: Run tests
+        env:
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: jobboard_testing
+          DB_USERNAME: jobboard
+          DB_PASSWORD: secret
+          CACHE_STORE: array
+          SESSION_DRIVER: array
+          QUEUE_CONNECTION: sync
+        run: php artisan test
+
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy to AWS EC2
+    needs: tests
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd jobboard-api
+            git pull origin main
+            docker compose exec -T app composer install --no-interaction --optimize-autoloader
+            docker compose exec -T app php artisan migrate --force
+            docker compose exec -T app php artisan config:clear
+            docker compose exec -T app php artisan cache:clear
+            docker compose exec -T app php artisan route:clear
+            echo "Deployment complete"
