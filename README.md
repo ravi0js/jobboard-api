@@ -5,7 +5,7 @@ A production-grade **Job Board REST API** built with Laravel, demonstrating real
 
 ## 🚀 Live API Documentation
 
-> Swagger UI: `http://your-server-ip/api/documentation`
+> Swagger UI: `http://52.35.164.41/api/documentation`
 
 ---
 
@@ -115,25 +115,36 @@ docker compose exec app php artisan test
 ```
 
 ---
-
 ## 🏗 Architecture
 
-├── app/
-│   ├── Http/
-│   │   ├── Controllers/Api/    # AuthController, JobController, JobApplicationController
-│   │   └── Middleware/         # RoleMiddleware (RBAC)
-│   └── Models/                 # User, Job, JobApplication, Role, Category
+app/
+├── Http/
+│   ├── Middleware/
+│   │   └── RoleMiddleware.php          # RBAC
+│   └── Controllers/
+│       └── Api/
+│           ├── AuthController.php
+│           ├── JobController.php
+│           └── JobApplicationController.php
+├── Models/
+│   ├── User.php
+│   ├── Job.php
+│   ├── JobApplication.php
+│   ├── Role.php
+│   └── Category.php
 ├── database/
-│   ├── migrations/             # All table migrations
-│   ├── factories/              # Test factories
-│   └── seeders/                # Role, Category seeders
+│   ├── migrations/                     # All table migrations
+│   ├── factories/                      # Test factories
+│   └── seeders/                        # Role, Category seeders
 ├── routes/
-│   └── api.php                 # All API routes
+│   └── api.php                         # All API routes
 ├── tests/
-│   └── Feature/                # AuthTest, JobTest, JobApplicationTest
+│   └── Feature/
+│       ├── AuthTest.php
+│       ├── JobTest.php
+│       └── JobApplicationTest.php
 ├── docker-compose.yml
 └── Dockerfile
-
 
 ---
 
