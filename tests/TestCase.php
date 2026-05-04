@@ -17,6 +17,12 @@ abstract class TestCase extends BaseTestCase
     {
         parent::setUp();
         $this->seedRoles();
+
+        // Clear rate limiter between tests
+        \Illuminate\Support\Facades\RateLimiter::clear('api');
+        \Illuminate\Support\Facades\RateLimiter::clear('auth');
+        \Illuminate\Support\Facades\RateLimiter::clear('jobs');
+        \Illuminate\Support\Facades\RateLimiter::clear('applications');
     }
 
     protected function seedRoles(): void

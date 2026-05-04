@@ -7,17 +7,22 @@ use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\JobApplicationController;
 
 // ── Public Routes ─────────────────────────────────────────
-Route::prefix('auth')->group(function () {
+
+// Auth - strict rate limit (5 per minute)
+Route::middleware('throttle:auth')->prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login',    [AuthController::class, 'login']);
 });
 
-Route::get('/jobs',       [JobController::class, 'index']);
-Route::get('/jobs/{id}',  [JobController::class, 'show']);
-Route::get('/categories', [CategoryController::class, 'index']);
+// Public job listing - global rate limit
+Route::middleware('throttle:api')->group(function () {
+    Route::get('/jobs',       [JobController::class, 'index']);
+    Route::get('/jobs/{id}',  [JobController::class, 'show']);
+    Route::get('/categories', [CategoryController::class, 'index']);
+});
 
 // ── Protected Routes ──────────────────────────────────────
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
 
     // Auth
     Route::get('/profile',      [AuthController::class, 'profile']);
@@ -25,19 +30,23 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Candidate only
     Route::middleware('role:candidate')->group(function () {
-        Route::post('/jobs/{jobId}/apply',    [JobApplicationController::class, 'apply']);
-        Route::get('/my-applications',        [JobApplicationController::class, 'myApplications']);
-        Route::delete('/applications/{id}',   [JobApplicationController::class, 'withdraw']);
+        Route::middleware('throttle:applications')->group(function () {
+            Route::post('/jobs/{jobId}/apply',  [JobApplicationController::class, 'apply']);
+        });
+        Route::get('/my-applications',          [JobApplicationController::class, 'myApplications']);
+        Route::delete('/applications/{id}',     [JobApplicationController::class, 'withdraw']);
     });
 
     // Employer only
     Route::middleware('role:employer')->group(function () {
-        Route::post('/jobs',                              [JobController::class, 'store']);
-        Route::put('/jobs/{id}',                          [JobController::class, 'update']);
-        Route::delete('/jobs/{id}',                       [JobController::class, 'destroy']);
-        Route::get('/my-jobs',                            [JobController::class, 'myJobs']);
-        Route::get('/jobs/{jobId}/applications',          [JobApplicationController::class, 'jobApplications']);
-        Route::put('/applications/{id}/status',           [JobApplicationController::class, 'updateStatus']);
+        Route::middleware('throttle:jobs')->group(function () {
+            Route::post('/jobs',                [JobController::class, 'store']);
+        });
+        Route::put('/jobs/{id}',                        [JobController::class, 'update']);
+        Route::delete('/jobs/{id}',                     [JobController::class, 'destroy']);
+        Route::get('/my-jobs',                          [JobController::class, 'myJobs']);
+        Route::get('/jobs/{jobId}/applications',        [JobApplicationController::class, 'jobApplications']);
+        Route::put('/applications/{id}/status',         [JobApplicationController::class, 'updateStatus']);
     });
 
     // Admin only

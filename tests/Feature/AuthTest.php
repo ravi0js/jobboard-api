@@ -135,4 +135,51 @@ class AuthTest extends TestCase
         $response = $this->postJson('/api/auth/logout');
         $response->assertStatus(200);
     }
+
+    public function test_login_is_rate_limited_after_5_attempts(): void
+    {
+        $candidate = $this->createCandidate();
+
+        // Make 5 failed attempts
+        for ($i = 0; $i < 5; $i++) {
+            $this->postJson('/api/auth/login', [
+                'email'    => $candidate->email,
+                'password' => 'wrongpassword',
+            ]);
+        }
+
+        // 6th attempt should be rate limited
+        $response = $this->postJson('/api/auth/login', [
+            'email'    => $candidate->email,
+            'password' => 'wrongpassword',
+        ]);
+
+        $response->assertStatus(429)
+                ->assertJsonFragment(['message' => 'Too many login attempts. Try again in 1 minute.']);
+    }
+
+    public function test_register_is_rate_limited_after_5_attempts(): void
+    {
+        // Make 5 attempts
+        for ($i = 0; $i < 5; $i++) {
+            $this->postJson('/api/auth/register', [
+                'name'                  => 'Test User',
+                'email'                 => "test{$i}@example.com",
+                'password'              => 'password',
+                'password_confirmation' => 'password',
+                'role_id'               => 3,
+            ]);
+        }
+
+        // 6th attempt should be rate limited
+        $response = $this->postJson('/api/auth/register', [
+            'name'                  => 'Test User',
+            'email'                 => 'test6@example.com',
+            'password'              => 'password',
+            'password_confirmation' => 'password',
+            'role_id'               => 3,
+        ]);
+
+        $response->assertStatus(429);
+    }
 }
