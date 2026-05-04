@@ -1,4 +1,3 @@
-cat > README.md << 'EOF'
 # JobBoard API
 
 A production-grade **Job Board REST API** built with Laravel, demonstrating real-world backend development skills including authentication, RBAC, caching, testing, and containerisation.
@@ -114,9 +113,9 @@ docker compose exec app php artisan migrate --seed
 docker compose exec app php artisan test
 ```
 
----
 ## 🏗 Architecture
 
+```text
 app/
 ├── Http/
 │   ├── Middleware/
@@ -144,10 +143,9 @@ app/
 │       ├── JobTest.php
 │       └── JobApplicationTest.php
 ├── docker-compose.yml
-└── Dockerfile
+└── Dockerfile---
 
----
-
+```
 ## 👤 Test Credentials (after seeding)
 
 | Role | Email | Password |
